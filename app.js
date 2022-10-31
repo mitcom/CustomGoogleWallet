@@ -25,6 +25,32 @@ const issuerId = '';
 const classId = '';
 
 async function createPassAndToken(req, res) {
+  const credentials = require(serviceAccountFile);
+  const httpClient = new GoogleAuth({
+    credentials: credentials,
+    scopes: 'https://www.googleapis.com/auth/wallet_object.issuer'
+  });
+
+  const objectUrl = 'https://walletobjects.googleapis.com/walletobjects/v1/genericObject/';
+  const objectPayload = require('./generic-pass.json');
+
+  objectPayload.id = `${issuerId}.${req.body.email.replace(/[^\w.-]/g, '_')}-${classId}`;
+  objectPayload.classId = `${issuerId}.${classId}`;
+
+  let objectResponse;
+  try {
+    objectResponse = await httpClient.request({url: objectUrl + objectPayload.id, method: 'GET'});
+    console.log('existing object', objectPayload.id);
+  } catch (err) {
+    if (err.response && err.response.status === 404) {
+      objectResponse = await httpClient.request({url: objectUrl, method: 'POST', data: objectPayload});
+      console.log('new object', objectPayload.id);
+    } else {
+      console.error(err);
+      throw err;
+    }
+  }
+
   res.send("Form submitted!");
 }
 
